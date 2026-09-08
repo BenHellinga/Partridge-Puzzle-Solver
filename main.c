@@ -8,7 +8,7 @@
 
 
 
-#define NUM_CUBES 10
+#define NUM_CUBES 9
 #define BOARD_SIZE (NUM_CUBES * (NUM_CUBES + 1) / 2)
 
 
@@ -17,6 +17,7 @@
 
 
 
+// node in the skyline linked list, tracks a flat segment of the placed pieces
 typedef struct Node Node;
 struct Node
 {
@@ -29,6 +30,7 @@ struct Node
 
 
 
+// a placed square, position and side length
 typedef struct
 {
     int x;
@@ -58,7 +60,6 @@ void printBoard(int num);
 
 int solve_r(int depth);
 Node *selectNode();
-int invalidPit(int width, int height);
 
 
 
@@ -68,11 +69,11 @@ int invalidPit(int width, int height);
 
 int main()
 {
-    // init pieces
+    // one piece of each size, 1 through num_cubes
     for (int i = 0; i < NUM_CUBES + 1; ++i)
         pieces[i] = i;
 
-    // init board
+    // init board skyline, left wall, floor, right wall as sentinels
     Node rightWall = { NULL, NULL, BOARD_SIZE, BOARD_SIZE + 1, 0 };
     Node floor = { NULL, NULL, 0, 0, BOARD_SIZE };
     Node leftWall = { NULL, NULL, 0, BOARD_SIZE + 1, 0 };
@@ -84,14 +85,11 @@ int main()
 
     head = &leftWall;
 
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
+    clock_t start = clock();
     solve_r(0);
+    clock_t end = clock();
 
-    clock_gettime(CLOCK_MONOTONIC, &end);
-
-    double time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    double time = (end - start) / (double)CLOCKS_PER_SEC;
     printf("Time: %fs\n", time);
 
     printf("Finished\n");
@@ -125,6 +123,7 @@ void printBoard(int num)
     char image[BOARD_SIZE][BOARD_SIZE];
     memset(image, ' ', BOARD_SIZE * BOARD_SIZE);
 
+    // draw each placed square into the ascii buffer
     for (int i = 0; i < num; ++i)
     {
         int x = squares[i].x;
@@ -199,9 +198,11 @@ int solve_r(int depth)
     Node new1;
     Node new2;
 
+    // largest piece that can fit here, capped by section width, board edge, and piece count
     int maxSize = node->w < BOARD_SIZE - node->y ? node->w : BOARD_SIZE - node->y;
     maxSize = maxSize < NUM_CUBES ? maxSize : NUM_CUBES;
 
+    // if the biggest option spans the whole section, handle it separately below
     int fullWidth = maxSize == node->w;
     if (fullWidth) --maxSize;
 
@@ -210,22 +211,6 @@ int solve_r(int depth)
         if (pieces[size] == 0) continue;
 
         int newY = node->y + size;
-
-        // check left pit
-        if (left->y < newY && left->y < left->l->y)
-        {
-            int height = newY < left->l->y ? newY - left->y : left->l->y - left->y;
-            if (invalidPit(left->w, height))
-                return 0;
-        }
-
-        // check right pit (right is the new node we're going to make)
-        if (node->y < right->y)
-        {
-            int height = newY < right->y ? newY - node->y : right->y - node->y;
-            if (invalidPit(node->w - size, height))
-                continue;
-        }
 
         // check if left is same y, and merge
         if (newY == left->y)
@@ -252,6 +237,7 @@ int solve_r(int depth)
         squares[depth] = (Square){ node->x, node->y, size };
         int ret = solve_r(depth + 1);
 
+        // backtrack, restore skyline and piece count
         *lp = ol;
         *rp = or;
         ++pieces[size];
@@ -270,22 +256,7 @@ int solve_r(int depth)
 
         int newY = node->y + size;
 
-        // check left pit
-        if (left->y < newY && left->y < left->l->y)
-        {
-            int height = newY < left->l->y ? newY - left->y : left->l->y - left->y;
-            if (invalidPit(left->w, height))
-                return 0;
-        }
-
-        // check right pit
-        if (right->y < newY && right->y < right->r->y)
-        {
-            int height = newY < right->r->y ? newY - right->y : right->r->y - right->y;
-            if (invalidPit(right->w, height))
-                return 0;
-        }
-
+        // merge with left, right, both, or neither, depending on matching heights
         if (newY == left->y && newY == right->y)
         {
             new1 = (Node){ right->r, left->l, left->x, newY, left->w + size + right->w };
@@ -338,6 +309,7 @@ int solve_r(int depth)
 
 
 
+// picks the lowest, narrowest valid corner of the skyline to fill next
 Node *selectNode()
 {
     Node *current = head->r;
@@ -346,119 +318,15 @@ Node *selectNode()
     int min = BOARD_SIZE;
 
     while (current->r != NULL)
-    {    
-        // // find lowest y
-        // if (current->y < selected->y)
-        //     selected = current;
-
+    {
         if (current->y < current->r->y && current->y < current->l->y && current->w < min)
         {
             min = current->w;
             selected = current;
         }
 
-        // if (current->y < current->r->y) return current;
-
         current = current->r;
     }
 
     return selected;
-}
-
-
-
-int invalidPit(int width, int height)
-{
-    return 0;
-
-    int n1;
-    int n2;
-    int n3;
-    int n4;
-    int n5;
-
-    switch(width)
-    {
-        case 1:
-            n1 = pieces[1];
-            if (height > n1) return 1;
-            break;
-
-        case 2:
-            n2 = pieces[2];
-            if (height > 2 * n2) return 1;
-            break;
-
-        case 3:
-            n1 = pieces[1];
-            n2 = pieces[2];
-            n3 = pieces[3];
-
-            switch (height)
-            {
-                case 1:
-                    if (n3 == 0 && (n1 == 0 || n2 == 0)) return 1;
-                    break;
-
-                default:
-                    if (height > 3 * n3) return 1;
-                    break;
-            }
-            break;
-
-        case 4:
-            n1 = pieces[1];
-            n2 = pieces[2];
-            n3 = pieces[3];
-            n4 = pieces[4];
-
-            switch (height)
-            {
-                case 1:
-                    if (n4 == 0 && n2 < 2 && (n1 == 0 || n3 == 0)) return 1;
-                    break;
-
-                case 2:
-                    if (n4 == 0 && n2 < 2) return 1;
-                    break; 
-
-                default:
-                    if (height > 4 * n4) return 1;
-                    break;
-            }
-            break;
-
-        case 5:
-            n1 = pieces[1];
-            n2 = pieces[2];
-            n3 = pieces[3];
-            n4 = pieces[4];
-            n5 = pieces[5];
-
-            switch (height)
-            {
-                case 1:
-                    if (n5 == 0 && (n4 == 0 || n1 == 0) && (n3 == 0 || n2 == 0) && (n2 < 2 || n1 == 0)) return 1;
-                    break;
-
-                case 2:
-                    if (n5 == 0 && (n3 == 0 || n2 == 0)) return 1;
-                    break;
-
-                case 3:
-                    if (n5 == 0 && (n3 == 0 || n2 < 2)) return 1;
-                    break;
-
-                case 4:
-                    if (n5 == 0 && (n3 < 2 || n2 < 2)) return 1;
-                    break;
-
-                default:
-                    if (height > 5 * n4) return 1;
-                    break;
-            }
-            break;
-    }
-
-    return 0;
 }
