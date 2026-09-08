@@ -5,7 +5,7 @@
 
 ## About
 
-The partridge puzzle asks you to pack a square of side `n(n+1)/2` with one `1x1` square, two `2x2` squares, three `3x3` squares, and so on up to `n` squares of size `nxn`, using every piece and leaving no gaps. The name comes from the growing quantities, one of one size, two of the next, similar to the counting pattern in "The Twelve Days of Christmas". This project solves the puzzle for `n = 9` (a `55x55` board), using backtracking with an aggressive board representation to keep the search fast.
+The partridge puzzle asks you to pack a square of side `n(n+1)/2` with one `1x1` square, two `2x2` squares, three `3x3` squares, and so on up to `n` squares of size `nxn`, using every piece and leaving no gaps. The name comes from the growing quantities, one of one size, two of the next, similar to the counting pattern in "The Twelve Days of Christmas". This project solves the puzzle for `n = 9` (a `45x45` board), using backtracking with an aggressive board representation to keep the search fast.
 
 This project was inspired by [this video](https://www.youtube.com/watch?v=eqyuQZHfNPQ)
 
