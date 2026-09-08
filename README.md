@@ -1,7 +1,6 @@
 # Partridge Puzzle Solver
 
 **This project is no longer under active development.**
-**This project may be revisited in the future.**
 
 ## About
 
